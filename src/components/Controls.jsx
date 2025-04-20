@@ -9,11 +9,9 @@ const Controls = () => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-
       reader.onload = (event) => {
         dispatch(setImage(event.target.result));
       };
-
       reader.readAsDataURL(file);
     }
   };

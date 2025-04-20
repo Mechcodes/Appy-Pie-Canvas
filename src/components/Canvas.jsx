@@ -1,142 +1,203 @@
-import React, { useEffect, useRef } from 'react';
-import { fabric } from 'fabric';
-import { useSelector, useDispatch } from 'react-redux';
-import { setScale, setPosition } from '../store/index.js';
+import React, { useEffect, useRef } from "react";
+import { fabric } from "fabric";
+import { useSelector, useDispatch } from "react-redux";
+import { setScale, setPosition } from "../store";
 
-const Canvas = () => {
+const Canvas = ({ selectedFrame }) => {
   const canvasRef = useRef(null);
   const fabricRef = useRef(null);
   const imageRef = useRef(null);
   const clipPathRef = useRef(null);
+  const stencilRef = useRef(null);
   const dispatch = useDispatch();
-  const { image} = useSelector((state) => state.editor);
+  const { image } = useSelector((state) => state.editor);
 
   useEffect(() => {
-    fabricRef.current = new fabric.Canvas(canvasRef.current, {
-      width: 400,
-      height: 300,
+    const canvasElement = canvasRef.current;
+    const parent = canvasElement.parentElement;
+
+    const canvasWidth = parent.clientWidth;
+    const canvasHeight = parent.clientHeight;
+
+    fabricRef.current = new fabric.Canvas(canvasElement, {
+      width: canvasWidth,
+      height: canvasHeight,
+      backgroundColor: "#f0f0f0",
+      preserveObjectStacking: true,
     });
-
-    const clipPath = new fabric.Rect({
-      width: 400,
-      height: 300,
-      rx: 20,
-      ry: 20,
-      absolutePositioned: true,
-    });
-
-    clipPathRef.current = clipPath;
-
-    const stencilBorder = new fabric.Rect({
-      width: 400,
-      height: 300,
-      rx: 20,
-      ry: 20,
-      fill: 'transparent',
-      stroke: 'black',
-      strokeWidth: 2,
-      selectable: false,
-      evented: false,
-    });
-
-    fabricRef.current.add(stencilBorder);
-    fabricRef.current.centerObject(stencilBorder);
 
     return () => {
       fabricRef.current.dispose();
     };
   }, []);
 
-  useEffect(() => {
-    if (image && fabricRef.current) {
-      fabric.Image.fromURL(image, (img) => {
-        const canvas = fabricRef.current;
-        const clipPath = clipPathRef.current;
+  const addStencil = () => {
+    const canvas = fabricRef.current;
+    if (!selectedFrame || stencilRef.current) return;
 
-        // Calculate the scale to fit the image within the clipPath
-        const scaleX = clipPath.width / img.width;
-        const scaleY = clipPath.height / img.height;
-        const initialScale = Math.min(scaleX, scaleY);
+    let clipPath;
+    let stencilBorder;
 
-        img.set({
-          scaleX: initialScale,
-          scaleY: initialScale,
-          clipPath: clipPath,
+    switch (selectedFrame) {
+      case "circle":
+        clipPath = new fabric.Circle({
+          radius: 150,
+          left: 100,
+          top: 0,
+          absolutePositioned: true,
+        });
+        stencilBorder = new fabric.Circle({
+          radius: 150,
+          left: 100,
+          top: 0,
+          stroke: "black",
+          fill: "transparent",
+          strokeWidth: 2,
+          selectable: false,
+          evented: false,
+        });
+        break;
+      case "star":
+        clipPath = new fabric.Polygon(
+          [
+            { x: 200, y: 50 },
+            { x: 240, y: 180 },
+            { x: 100, y: 110 },
+            { x: 300, y: 110 },
+            { x: 160, y: 180 },
+          ],
+          {
+            absolutePositioned: true,
+          }
+        );
+        stencilBorder = fabric.util.object.clone(clipPath);
+        stencilBorder.set({
+          stroke: "black",
+          fill: "transparent",
+          strokeWidth: 2,
+          selectable: true,
+          hasControls: true,
+          hasBorders: true,
         });
 
-        if (imageRef.current) {
-          canvas.remove(imageRef.current);
-        }
-
-        imageRef.current = img;
-        canvas.add(img);
-        canvas.centerObject(img);
-
-        // Ensure the image is behind the stencil border
-        img.moveTo(0);
-
-        canvas.renderAll();
-
-        // Update Redux state
-        dispatch(setScale(initialScale));
-        dispatch(setPosition({ x: img.left, y: img.top }));
-      });
+        break;
+      default:
+        clipPath = new fabric.Rect({
+          width: 400,
+          height: 300,
+          rx: 20,
+          ry: 20,
+          absolutePositioned: true,
+        });
+        stencilBorder = new fabric.Rect({
+          width: 400,
+          height: 300,
+          rx: 20,
+          ry: 20,
+          fill: "transparent",
+          stroke: "black",
+          strokeWidth: 2,
+        });
     }
-  }, [image, dispatch]);
+
+    clipPathRef.current = clipPath;
+    stencilRef.current = stencilBorder;
+
+    canvas.add(stencilBorder);
+    canvas.sendToBack(stencilBorder);
+    canvas.renderAll();
+    let prevLeft = stencilBorder.left;
+  let prevTop = stencilBorder.top;
+
+  stencilBorder.on("moving", () => {
+    const deltaX = stencilBorder.left - prevLeft;
+    const deltaY = stencilBorder.top - prevTop;
+
+    if (imageRef.current) {
+      imageRef.current.left += deltaX;
+      imageRef.current.top += deltaY;
+      imageRef.current.setCoords();
+    }
+
+    if (clipPathRef.current) {
+      clipPathRef.current.left += deltaX;
+      clipPathRef.current.top += deltaY;
+      clipPathRef.current.setCoords();
+    }
+
+    prevLeft = stencilBorder.left;
+    prevTop = stencilBorder.top;
+
+    canvas.renderAll();
+  });
+
+  };
 
   useEffect(() => {
-    if (fabricRef.current && imageRef.current) {
+    if (selectedFrame) {
       const canvas = fabricRef.current;
-      const img = imageRef.current;
-      const clipPath = clipPathRef.current;
-
-      canvas.on('object:moving', (e) => {
-        const imgBounds = img.getBoundingRect();
-        const clipBounds = clipPath.getBoundingRect();
-
-        // Constrain movement within clipPath bounds
-        if (imgBounds.left > clipBounds.left) img.left = clipBounds.left;
-        if (imgBounds.top > clipBounds.top) img.top = clipBounds.top;
-        if (imgBounds.right < clipBounds.right) img.left = clipBounds.right - imgBounds.width;
-        if (imgBounds.bottom < clipBounds.bottom) img.top = clipBounds.bottom - imgBounds.height;
-
-        dispatch(setPosition({ x: img.left, y: img.top }));
-        canvas.renderAll();
-      });
-
-      canvas.on('mouse:wheel', (e) => {
-        e.e.preventDefault();
-        e.e.stopPropagation();
-        const delta = e.e.deltaY;
-        let zoom = img.scaleX;
-        zoom *= 0.999 ** delta;
-        if (zoom > 0.1 && zoom < 5) {
-          const center = img.getCenterPoint();
-          img.scale(zoom);
-          dispatch(setScale(zoom));
-
-          // Adjust position to keep the image within the clipPath
-          const imgBounds = img.getBoundingRect();
-          const clipBounds = clipPath.getBoundingRect();
-
-          if (imgBounds.width < clipBounds.width) {
-            img.left = clipBounds.left + (clipBounds.width - imgBounds.width) / 2;
-          }
-          if (imgBounds.height < clipBounds.height) {
-            img.top = clipBounds.top + (clipBounds.height - imgBounds.height) / 2;
-          }
-
-          img.setPositionByOrigin(center, 'center', 'center');
-          dispatch(setPosition({ x: img.left, y: img.top }));
-          canvas.renderAll();
-        }
-      });
+      canvas.clear();
+      stencilRef.current = null;
+      imageRef.current = null;
+      addStencil();
     }
-  }, [dispatch]);
+  }, [selectedFrame]);
+
+  useEffect(() => {
+    const canvas = fabricRef.current;
+
+    if (!image) {
+      canvas.clear();
+      stencilRef.current = null;
+      imageRef.current = null;
+      return;
+    }
+
+    fabric.Image.fromURL(image, (img) => {
+      const clipPath = clipPathRef.current;
+      
+      const scaleX = (clipPath?.width || 400) / img.width;
+      const scaleY = (clipPath?.height || 300) / img.height;
+      const initialScale = Math.min(scaleX, scaleY);
+
+      img.set({
+        scaleX: initialScale,
+        scaleY: initialScale,
+        left: 0,
+        top: 0,
+        selectable: true,
+        hasBorders: true,
+        hasControls: true,
+      });
+      if (clipPath) {
+        img.clipPath = clipPath;
+      }
+
+      if (imageRef.current) {
+        canvas.remove(imageRef.current);
+      }
+
+      imageRef.current = img;
+      canvas.add(img);
+     
+
+      img.bringToFront();
+      canvas.setActiveObject(img);
+      canvas.renderAll();
+
+      dispatch(setScale(initialScale));
+      dispatch(setPosition({ x: img.left, y: img.top }));
+    });
+  }, [image, dispatch]);
+
+  // You can keep object:moving and mouse:wheel handlers here as-is...
 
   return (
-    <div className="flex justify-center items-center bg-gray-200 p-4 rounded-lg">
-      <canvas ref={canvasRef} className="border border-gray-300 rounded" />
+    <div className="flex-1 h-full bg-gray-200 p-4 rounded-lg">
+      <canvas
+        ref={canvasRef}
+        className="w-full h-full border border-gray-300 rounded"
+      />
     </div>
   );
 };
