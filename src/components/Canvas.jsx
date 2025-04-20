@@ -58,7 +58,7 @@ const Canvas = ({ selectedFrame }) => {
       top,
       fill: "transparent",
       stroke: "#B5651D",
-      strokeWidth: 20,
+      strokeWidth: 1,
       hasControls: true,
       hasBorders: true,
       lockScalingFlip: true,
@@ -152,13 +152,18 @@ const Canvas = ({ selectedFrame }) => {
   };
 
   useEffect(() => {
-    if (selectedFrame) {
-      const canvas = fabricRef.current;
+
+    const canvas = fabricRef.current;
       canvas.clear();
       stencilRef.current = null;
       imageRef.current = null;
+      
+    if (selectedFrame) {
+      
       addStencil();
     }
+
+    
   }, [selectedFrame]);
 
   useEffect(() => {

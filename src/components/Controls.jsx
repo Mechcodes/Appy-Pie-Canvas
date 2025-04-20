@@ -1,6 +1,6 @@
 import React from 'react';
 import { useDispatch } from 'react-redux';
-import { setImage, resetEditor } from '../store';
+import { setImage } from '../store';
 
 const Controls = () => {
   const dispatch = useDispatch();
@@ -16,9 +16,6 @@ const Controls = () => {
     }
   };
 
-  const handleReset = () => {
-    dispatch(resetEditor());
-  };
 
   return (
     <div className="flex flex-col space-y-4">
@@ -26,12 +23,7 @@ const Controls = () => {
         <span className="mt-2 text-base leading-normal">Select an image</span>
         <input type='file' className="hidden" accept="image/*" onChange={handleImageUpload} />
       </label>
-      <button
-        className="px-4 py-2 bg-red-500 text-white rounded-lg shadow-lg tracking-wide uppercase border border-red cursor-pointer hover:bg-red-600"
-        onClick={handleReset}
-      >
-        Reset
-      </button>
+      
     </div>
   );
 };
