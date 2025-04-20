@@ -46,8 +46,6 @@ const Canvas = ({ selectedFrame }) => {
     const clipPath = new fabric.Rect({
       width,
       height,
-      rx: 20,
-      ry: 20,
       left,
       top,
       absolutePositioned: true,
@@ -56,13 +54,11 @@ const Canvas = ({ selectedFrame }) => {
     const stencilBorder = new fabric.Rect({
       width,
       height,
-      rx: 20,
-      ry: 20,
       left,
       top,
       fill: "transparent",
-      stroke: "black",
-      strokeWidth: 2,
+      stroke: "#B5651D",
+      strokeWidth: 20,
       hasControls: true,
       hasBorders: true,
       lockScalingFlip: true,
@@ -134,14 +130,14 @@ const Canvas = ({ selectedFrame }) => {
         const requiredWidth = currentVisibleWidth * scaleX;
         const requiredHeight = currentVisibleHeight * scaleY;
 
-        const imageScaleX = requiredWidth/ img.width;
+        const imageScaleX = requiredWidth / img.width;
         const imageScaleY = requiredHeight / img.height;
 
         const currentTop = img.top;
         const currentLeft = img.left;
         img.set({
-          top: Math.abs(clipPath.top - currentTop)*scaleY + clipPath.top,
-          left: Math.abs(clipPath.left - currentLeft)*scaleX + clipPath.left,
+          top: Math.abs(clipPath.top - currentTop) * scaleY + clipPath.top,
+          left: Math.abs(clipPath.left - currentLeft) * scaleX + clipPath.left,
           scaleX: imageScaleX,
           scaleY: imageScaleY,
         });
@@ -176,7 +172,6 @@ const Canvas = ({ selectedFrame }) => {
     }
 
     fabric.Image.fromURL(image, (img) => {
-      
       const clipPath = clipPathRef.current;
       const frameWidth = clipPath?.width;
       const frameHeight = clipPath?.height;
@@ -192,6 +187,7 @@ const Canvas = ({ selectedFrame }) => {
       const imgHeightScaled = img.height * initialScale;
 
       // Center the image within the frame
+
       const centerLeft = frameLeft + (frameWidth - imgWidthScaled) / 2;
       const centerTop = frameTop + (frameHeight - imgHeightScaled) / 2;
 
@@ -215,6 +211,7 @@ const Canvas = ({ selectedFrame }) => {
 
       imageRef.current = img;
       canvas.add(img);
+      // canvas.bringToFront(stencilRef.current);
 
       canvas.setActiveObject(img);
       canvas.renderAll();
