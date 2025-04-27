@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Canvas from './components/Canvas';
 import Controls from './components/Controls';
-import Test from './components/Test';
+// import Test from './components/Test';
 
 const App = () => {
   const [selectedFrame, setSelectedFrame] = useState(null);
